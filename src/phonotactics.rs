@@ -29,10 +29,8 @@ pub fn is_suffix_compatible(stem: &str, suffix: &str) -> bool {
 
     let stem_ends_consonant = !ends_with_vowel(&stem_lower);
 
-    if matches!(suffix_lower.as_str(), "yx" | "ix" | "ax") {
-        if stem_ends_consonant {
-            return false;
-        }
+    if matches!(suffix_lower.as_str(), "yx" | "ix" | "ax") && stem_ends_consonant {
+        return false;
     }
 
     true
@@ -50,14 +48,9 @@ pub fn is_phonotactically_valid(genus: &str) -> bool {
     let last_three: String = chars[chars.len().saturating_sub(3)..].iter().collect();
 
     let bad_endings = [
-        "nx", "ps", "ks", "ts", "ds", "bs", "gs",
-        "pt", "kt", "bt", "dt", "gt",
-        "px", "kx", "tx", "dx", "bx", "gx",
-        "nk", "ng", "nq",
-        "mph", "nph", "nth",
-        "xc", "xp", "xk", "xt",
-        "lx", "rx",
-        "mnx", "mpx", "ntx", "nkx",
+        "nx", "ps", "ks", "ts", "ds", "bs", "gs", "pt", "kt", "bt", "dt", "gt", "px", "kx", "tx",
+        "dx", "bx", "gx", "nk", "ng", "nq", "mph", "nph", "nth", "xc", "xp", "xk", "xt", "lx",
+        "rx", "mnx", "mpx", "ntx", "nkx",
     ];
 
     for pattern in &bad_endings {
@@ -66,9 +59,10 @@ pub fn is_phonotactically_valid(genus: &str) -> bool {
         }
     }
 
-    let valid_endings = ["us", "os", "is", "es", "as", "um", "on", "en", "er", "or",
-                         "a", "e", "o", "i", "u", "n", "r", "s", "m", "l",
-                         "yx", "ix", "ax", "ex", "ox", "ma"];
+    let valid_endings = [
+        "us", "os", "is", "es", "as", "um", "on", "en", "er", "or", "a", "e", "o", "i", "u", "n",
+        "r", "s", "m", "l", "yx", "ix", "ax", "ex", "ox", "ma",
+    ];
 
     for ending in &valid_endings {
         if last_two.ends_with(ending) || last_three.ends_with(ending) {
@@ -77,28 +71,42 @@ pub fn is_phonotactically_valid(genus: &str) -> bool {
     }
 
     let last = chars.last().unwrap();
-    matches!(last, 'a' | 'e' | 'i' | 'o' | 'u' | 'n' | 'r' | 's' | 'm' | 'l')
+    matches!(
+        last,
+        'a' | 'e' | 'i' | 'o' | 'u' | 'n' | 'r' | 's' | 'm' | 'l'
+    )
 }
 
 fn has_bad_consonant_cluster(s: &str) -> bool {
     let chars: Vec<char> = s.to_lowercase().chars().collect();
 
     for i in 0..chars.len().saturating_sub(2) {
-        let cluster: String = chars[i..i+3].iter().collect();
+        let cluster: String = chars[i..i + 3].iter().collect();
 
-        if matches!(cluster.as_str(),
-            "nph" | "mph" | "nth" | "nkh" |
-            "xth" | "pht" | "ckh" | "tzs" |
-            "tsc" | "psc" | "scht" | "chs"
+        if matches!(
+            cluster.as_str(),
+            "nph"
+                | "mph"
+                | "nth"
+                | "nkh"
+                | "xth"
+                | "pht"
+                | "ckh"
+                | "tzs"
+                | "tsc"
+                | "psc"
+                | "scht"
+                | "chs"
         ) {
             return true;
         }
     }
 
     for i in 0..chars.len().saturating_sub(3) {
-        let cluster: String = chars[i..i+4].iter().collect();
+        let cluster: String = chars[i..i + 4].iter().collect();
 
-        if matches!(cluster.as_str(),
+        if matches!(
+            cluster.as_str(),
             "mphn" | "nthn" | "tzsch" | "tsch" | "psch"
         ) {
             return true;

@@ -16,8 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub const GENUS_SUFFIXES: &[&str] = &[
-    "us", "os", "es", "is", "a", "e", "as", "um", "on", "ma",
-    "er", "or", "en", "yx", "ix", "ax",
+    "us", "os", "es", "is", "a", "e", "as", "um", "on", "ma", "er", "or", "en", "yx", "ix", "ax",
 ];
 
 use super::morphemes::{Category, SpeciesDescriptor};

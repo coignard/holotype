@@ -21,8 +21,8 @@ pub mod data;
 pub mod decoder;
 pub mod formatter;
 pub mod generator;
-pub mod pronounceability;
 pub mod phonotactics;
+pub mod pronounceability;
 
 use chrono::{Datelike, Local, NaiveDate};
 use cli::Cli;

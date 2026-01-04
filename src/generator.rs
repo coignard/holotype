@@ -87,7 +87,9 @@ fn capitalize_first(s: &str) -> String {
 }
 
 fn get_safe_suffixes(morphemes: &Morphemes) -> Vec<&'static str> {
-    morphemes.genus_suffixes.iter()
+    morphemes
+        .genus_suffixes
+        .iter()
         .filter(|&&s| !matches!(s, "yx" | "ix" | "ax"))
         .copied()
         .collect()
@@ -115,12 +117,10 @@ fn assemble_genus(prefix: &Morpheme, root: &str, suffix: &str) -> String {
         } else {
             format!("{}{}", stem, s)
         }
+    } else if ends_with_vowel(&stem) {
+        format!("{}{}", stem, s)
     } else {
-        if ends_with_vowel(&stem) {
-            format!("{}{}", stem, s)
-        } else {
-            format!("{}{}{}", stem, connector, s)
-        }
+        format!("{}{}{}", stem, connector, s)
     };
 
     capitalize_first(&result.to_lowercase())
@@ -187,7 +187,8 @@ pub fn generate_name(
         let encoded = if quality_offset == 0 {
             base_encoded
         } else {
-            base_encoded.wrapping_mul(0x9e3779b97f4a7c15)
+            base_encoded
+                .wrapping_mul(0x9e3779b97f4a7c15)
                 .wrapping_add(quality_offset as u64)
         };
 

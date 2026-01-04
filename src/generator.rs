@@ -96,24 +96,14 @@ fn assemble_genus(prefix: &Morpheme, root: &str, suffix: &str) -> String {
         Origin::Latin => "i",
     };
 
-    let stem = if starts_with_vowel(r) {
-        if ends_with_vowel(p) && p.chars().last().unwrap() == r.chars().next().unwrap() {
-            format!("{}{}", &p[..p.len() - 1], r)
-        } else {
-            format!("{}{}", p, r)
-        }
-    } else if ends_with_vowel(p) {
+    let stem = if ends_with_vowel(p) || starts_with_vowel(r) {
         format!("{}{}", p, r)
     } else {
         format!("{}{}{}", p, connector, r)
     };
 
-    let result = if starts_with_vowel(s) {
-        if ends_with_vowel(&stem) && stem.len() > 1 {
-            format!("{}{}", &stem[..stem.len() - 1], s)
-        } else {
-            format!("{}{}", stem, s)
-        }
+    let result = if starts_with_vowel(s) && ends_with_vowel(&stem) && stem.len() > 1 {
+        format!("{}{}", &stem[..stem.len() - 1], s)
     } else {
         format!("{}{}", stem, s)
     };

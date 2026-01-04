@@ -20,7 +20,7 @@ use crate::data::{Morpheme, Morphemes, Origin};
 use crate::pronounceability::pronounceability_score;
 use chrono::{Datelike, NaiveDate};
 
-const MAX_REHASH_ATTEMPTS: u32 = 100;
+const MAX_QUALITY_ATTEMPTS: u32 = 100;
 
 fn encode_date_number(date: NaiveDate, number: u32) -> u64 {
     let year = (date.year() - 2000) as u64;
@@ -86,6 +86,13 @@ fn capitalize_first(s: &str) -> String {
     }
 }
 
+fn get_safe_suffixes(morphemes: &Morphemes) -> Vec<&'static str> {
+    morphemes.genus_suffixes.iter()
+        .filter(|&&s| !matches!(s, "yx" | "ix" | "ax"))
+        .copied()
+        .collect()
+}
+
 fn assemble_genus(prefix: &Morpheme, root: &str, suffix: &str) -> String {
     let p = prefix.text.trim_end_matches('-');
     let r = root.trim_start_matches('-').trim_end_matches('-');
@@ -102,34 +109,52 @@ fn assemble_genus(prefix: &Morpheme, root: &str, suffix: &str) -> String {
         format!("{}{}{}", p, connector, r)
     };
 
-    let result = if starts_with_vowel(s) && ends_with_vowel(&stem) && stem.len() > 1 {
-        format!("{}{}", &stem[..stem.len() - 1], s)
+    let result = if starts_with_vowel(s) {
+        if ends_with_vowel(&stem) && stem.len() > 1 {
+            format!("{}{}", &stem[..stem.len() - 1], s)
+        } else {
+            format!("{}{}", stem, s)
+        }
     } else {
-        format!("{}{}", stem, s)
+        if ends_with_vowel(&stem) {
+            format!("{}{}", stem, s)
+        } else {
+            format!("{}{}{}", stem, connector, s)
+        }
     };
 
     capitalize_first(&result.to_lowercase())
 }
 
+fn is_name_acceptable(genus: &str, config: &Config) -> bool {
+    if genus.len() > config.max_genus_length {
+        return false;
+    }
+
+    let score = pronounceability_score(genus);
+    score >= config.min_pronounceability_score
+}
+
 fn generate_name_internal(
     encoded: u64,
     salt_hash: u64,
-    rehash_offset: u32,
     morphemes: &Morphemes,
+    _config: &Config,
 ) -> String {
-    let adjusted_encoded = encoded.wrapping_add(rehash_offset as u64);
-    let permuted = permute(adjusted_encoded, salt_hash);
+    let permuted = permute(encoded, salt_hash);
 
     let genus_seed = permuted & 0xFFFFFFFF;
     let species_seed = (permuted >> 32) & 0xFFFFFFFF;
 
+    let safe_suffixes = get_safe_suffixes(morphemes);
+
     let prefix_idx = (genus_seed % morphemes.prefixes.len() as u64) as usize;
     let root_idx = ((genus_seed >> 8) % morphemes.roots.len() as u64) as usize;
-    let genus_suffix_idx = ((genus_seed >> 16) % morphemes.genus_suffixes.len() as u64) as usize;
+    let suffix_idx = ((genus_seed >> 16) % safe_suffixes.len() as u64) as usize;
 
     let prefix = &morphemes.prefixes[prefix_idx];
     let root = morphemes.roots[root_idx];
-    let genus_suffix = morphemes.genus_suffixes[genus_suffix_idx];
+    let genus_suffix = safe_suffixes[suffix_idx];
 
     let genus = assemble_genus(prefix, root, genus_suffix);
 
@@ -155,24 +180,26 @@ pub fn generate_name(
     morphemes: &Morphemes,
     config: &Config,
 ) -> String {
-    let encoded = encode_date_number(date, number);
+    let base_encoded = encode_date_number(date, number);
     let salt_hash = hash_salt(salt);
 
-    for rehash_offset in 0..MAX_REHASH_ATTEMPTS {
-        let name = generate_name_internal(encoded, salt_hash, rehash_offset, morphemes);
+    for quality_offset in 0..MAX_QUALITY_ATTEMPTS {
+        let encoded = if quality_offset == 0 {
+            base_encoded
+        } else {
+            base_encoded.wrapping_mul(0x9e3779b97f4a7c15)
+                .wrapping_add(quality_offset as u64)
+        };
 
+        let name = generate_name_internal(encoded, salt_hash, morphemes, config);
         let genus = name.split_whitespace().next().unwrap_or("");
-        if genus.len() > config.max_genus_length {
-            continue;
-        }
 
-        let score = pronounceability_score(&name);
-        if score >= config.min_pronounceability_score {
+        if is_name_acceptable(genus, config) {
             return name;
         }
     }
 
-    generate_name_internal(encoded, salt_hash, 0, morphemes)
+    generate_name_internal(base_encoded, salt_hash, morphemes, config)
 }
 
 pub fn decode_name(
@@ -241,6 +268,7 @@ fn days_in_month(year: i32, month: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data::Category;
 
     #[test]
     fn test_bijectivity() {
@@ -304,5 +332,41 @@ mod tests {
             decode_name(&name2, "", &morphemes, &config),
             Some((date, 1))
         );
+    }
+
+    #[test]
+    fn test_consonant_suffix_needs_connector() {
+        let prefix = Morpheme {
+            text: "Ecto",
+            origin: Origin::Greek,
+            category: Category::Position,
+        };
+
+        let result = assemble_genus(&prefix, "aliment", "ma");
+        assert_eq!(result, "Ectoalimentoma");
+    }
+
+    #[test]
+    fn test_vowel_suffix_no_connector() {
+        let prefix = Morpheme {
+            text: "Neo",
+            origin: Origin::Greek,
+            category: Category::Time,
+        };
+
+        let result = assemble_genus(&prefix, "morph", "us");
+        assert_eq!(result, "Neomorphus");
+    }
+
+    #[test]
+    fn test_both_vowels_elision() {
+        let prefix = Morpheme {
+            text: "Hydro",
+            origin: Origin::Greek,
+            category: Category::Environment,
+        };
+
+        let result = assemble_genus(&prefix, "cephala", "us");
+        assert_eq!(result, "Hydrocephalus");
     }
 }

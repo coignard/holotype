@@ -27,16 +27,16 @@ holotype 5 --date 2026-01-15
 holotype 1 --type patch
 
 # Decode name back to date and number
-holotype --extract "Cyanokinesum insularis"
+holotype --extract "Cyanokinesus insularis"
 ```
 
 Example output:
 ```
 $ holotype 1
-Cyanokinesum insularis
+Cyanokinesus insularis
 
-$ holotype --extract "Monojejunnx sylvaticus" --type patch
-Monojejunnx sylvaticus
+$ holotype --extract "Monojejune sylvaticus" --type patch
+Monojejune sylvaticus
 [patch] No. 1, dated 15.1.2000 (9486 days ago)
 ```
 

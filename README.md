@@ -4,11 +4,6 @@ Generate reproducible names for musical projects and patches.
 
 ## Install
 ```bash
-cargo install holotype
-```
-
-Or build from source:
-```bash
 git clone https://github.com/coignard/holotype
 cd holotype
 cargo build --release
